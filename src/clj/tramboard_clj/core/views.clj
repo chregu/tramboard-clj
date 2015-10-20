@@ -116,23 +116,31 @@
   {:headers {"Content-Type" "application/json; charset=utf-8"}
    :body ((resolve (symbol (str "tramboard-clj.api." apikey "/query-stations"))) query)}))
 
+(defn- query-connections* [api from to datetime]
+  (let [apikey (if (= api "ch") fallback-api api)]
+  {:headers {"Content-Type" "application/json; charset=utf-8"}
+   :body ((resolve (symbol (str "tramboard-clj.api." apikey "/query-connections"))) from to datetime)}))
+   
 (definterface INR
-  (indexPage     [])
-  (aboutPage     [])
-  (station       [api id])
-  (queryStations [api query]))
+  (indexPage        [])
+  (aboutPage        [])
+  (station          [api id])
+  (queryStations    [api query])
+  (queryConnections [api from to datetime]))
 
 (deftype NR []
   INR
   ;; @Trace maps to Trace {} metadata:
-  (^{Trace {}} indexPage     [_]       (index-page*))
-  (^{Trace {}} aboutPage     [_]       (about-page*))
-  (^{Trace {}} station       [_ api id]    (station* api id))
-  (^{Trace {}} queryStations [_ api query] (query-stations* api query)))
+  (^{Trace {}} indexPage        [_]       (index-page*))
+  (^{Trace {}} aboutPage        [_]       (about-page*))
+  (^{Trace {}} station          [_ api id]           (station* api id))
+  (^{Trace {}} queryStations    [_ api query]        (query-stations* api query))
+  (^{Trace {}} queryConnections [_ api from to datetime] (query-connections* api from to datetime)))
 
 (def ^:private nr (NR.))
 
-(defn index-page     []      (.indexPage nr))
-(defn about-page     []      (.aboutPage nr))
-(defn station        [api id]    (.station nr api id))
-(defn query-stations [api query] (.queryStations nr api query))
+(defn index-page        []                 (.indexPage nr))
+(defn about-page        []                 (.aboutPage nr))
+(defn station           [api id]           (.station nr api id))
+(defn query-stations    [api query]        (.queryStations nr api query))
+(defn query-connections [api from to datetime] (.queryConnections nr api from to datetime))

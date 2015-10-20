@@ -26,6 +26,7 @@
 (defroutes api-routes
   (context "/api" []
     (wrap-routes (wrap-routes (GET "/:api/stationboard/:id{.+}" [api id] (station api id)) wrap-json-response) wrap-no-cache)
+    (wrap-routes (wrap-routes (GET "/:api/connections/:from{.+}/:to{.+}/:datetime{.+}" [api from to datetime] (query-connections api from to datetime)) wrap-json-response) wrap-no-cache)
     (wrap-routes (wrap-routes (GET "/:api/stations/:query{.+}" [api query] (query-stations api query)) wrap-json-response) wrap-no-cache)))
 
 (defroutes app-routes

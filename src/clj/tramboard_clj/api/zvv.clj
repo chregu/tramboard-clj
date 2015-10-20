@@ -9,9 +9,16 @@
 
 (def query-stations-base-url "http://online.fahrplan.zvv.ch/bin/ajax-getstop.exe/dny?start=1&tpl=suggest2json&REQ0JourneyStopsS0A=7&getstop=1&noSession=yes&REQ0JourneyStopsB=25&REQ0JourneyStopsS0G=")
 (def station-base-url        "http://online.fahrplan.zvv.ch/bin/stboard.exe/dny?dirInput=&maxJourneys=100&boardType=dep&start=1&tpl=stbResult2json&input=")
-
+(def query-connections-base-url "http://transport.opendata.ch/v1/connections?limit=5&direct=1&")
+;(def query-connections-base-url "http://localhost/connections.json?")
 (def zvv-timezone (t/time-zone-for-id "Europe/Zurich"))
+
 (def zvv-date-formatter (f/with-zone (f/formatter "dd.MM.yy HH:mm") zvv-timezone))
+(def input-datetime-formatter (f/with-zone (f/formatter "YYYY-MM-dd'T'HH:mm") zvv-timezone))
+(def date-formatter (f/with-zone (f/formatter "YYYY-MM-dd") zvv-timezone))
+(def time-formatter (f/with-zone (f/formatter "HH:mm") zvv-timezone))
+(def z-date-formatter (f/with-zone (f/formatter "YYYY-MM-dd'T'HH:mm:ss+0200") zvv-timezone))
+
 
 (defn- sanitize [text]
   (reduce #(str/replace %1 (%2 0) (%2 1))
@@ -86,6 +93,32 @@
         data     (json/parse-string unparsed)
         stations (data "suggestions")]
     {:stations (map zvv-station (remove #(or (nil? (% "extId")) (not= "1" (% "type"))) stations))}))
+    
+(defn- zvv-passlist [passlist]
+    (let [station  (passlist "station")
+          departure (or (passlist "departure") (passlist "arrival"))]
+    {:name (station "name")
+     :id (station "id")
+     :departure departure}))
+
+(defn- zvv-section [section]
+    (let [passlist (map zvv-passlist ((section "journey") "passList"))]
+     passlist))
+
+(defn- zvv-connection [connection]
+    (let [sections (->> (connection "sections")
+                        (filter #(not (nil? (% "journey"))))
+                        (map zvv-section))]
+       (first sections)))
+
+(defn transform-query-connections-response [date]
+  (fn [response-body]
+  (let [data     (json/parse-string response-body)
+        connections (->> (data "connections")
+                         (map zvv-connection)
+                         (filter #(if (= (:departure (first %)) date) true false)) 
+                         )]
+    {:passlist connections})))
 
 ; TODO error handling
 (defn- do-api-call [url transform-fn]
@@ -99,3 +132,11 @@
 (defn query-stations [query]
   (let [request-url (str query-stations-base-url (codec/url-encode query))]
     (do-api-call request-url transform-query-stations-response)))
+    
+(defn query-connections [from to datetime]
+  (let [date (f/parse input-datetime-formatter datetime)
+        request-url (str query-connections-base-url "from=" (codec/url-encode from) "&to=" (codec/url-encode to) "&date=" (codec/url-encode (f/unparse  date-formatter date)) "&time=" (codec/url-encode (f/unparse  time-formatter (t/plus date (t/minutes -10)))))]
+        (do-api-call request-url (transform-query-connections-response (f/unparse z-date-formatter date)))))
+
+    
+  
