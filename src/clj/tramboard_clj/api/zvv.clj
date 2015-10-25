@@ -17,7 +17,7 @@
 (def input-datetime-formatter (f/with-zone (f/formatter "YYYY-MM-dd'T'HH:mm") zvv-timezone))
 (def date-formatter (f/with-zone (f/formatter "YYYY-MM-dd") zvv-timezone))
 (def time-formatter (f/with-zone (f/formatter "HH:mm") zvv-timezone))
-(def z-date-formatter (f/with-zone (f/formatter "YYYY-MM-dd'T'HH:mm:ss+0200") zvv-timezone))
+(def z-date-formatter (f/with-zone (f/formatter "YYYY-MM-dd'T'HH:mm:ss+0100") zvv-timezone)) ; FIX SOMERTIME
 
 
 (defn- sanitize [text]
@@ -96,9 +96,12 @@
     
 (defn- zvv-passlist [passlist]
     (let [station  (passlist "station")
-          departure (or (passlist "departure") (passlist "arrival"))]
+          departure (or (passlist "departure") (passlist "arrival"))
+          coord  (station "coordinate")]
     {:name (station "name")
      :id (station "id")
+     :location {:lat (coord "x")
+                :lng (coord "y")}
      :departure departure}))
 
 (defn- zvv-section [section]
