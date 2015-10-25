@@ -17,7 +17,7 @@
 (def input-datetime-formatter (f/with-zone (f/formatter "YYYY-MM-dd'T'HH:mm") zvv-timezone))
 (def date-formatter (f/with-zone (f/formatter "YYYY-MM-dd") zvv-timezone))
 (def time-formatter (f/with-zone (f/formatter "HH:mm") zvv-timezone))
-(def z-date-formatter (f/with-zone (f/formatter "YYYY-MM-dd'T'HH:mm:ss+0100") zvv-timezone)) ; FIX SOMERTIME
+(def z-date-formatter (f/with-zone (f/formatter "YYYY-MM-dd'T'HH:mm:ssZ") zvv-timezone)) ; FIX SOMERTIME
 
 
 (defn- sanitize [text]
