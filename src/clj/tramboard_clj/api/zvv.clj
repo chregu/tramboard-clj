@@ -138,7 +138,9 @@
     
 (defn query-connections [from to datetime]
   (let [date (f/parse input-datetime-formatter datetime)
-        request-url (str query-connections-base-url "from=" (codec/url-encode from) "&to=" (codec/url-encode to) "&date=" (codec/url-encode (f/unparse  date-formatter date)) "&time=" (codec/url-encode (f/unparse  time-formatter (t/plus date (t/minutes -10)))))]
+        date-10 (t/plus date (t/minutes -10))
+        request-url (str query-connections-base-url "from=" (codec/url-encode from) "&to=" (codec/url-encode to) "&date=" (codec/url-encode (f/unparse  date-formatter date-10)) "&time=" (codec/url-encode (f/unparse  time-formatter date-10)))]
+        
         (do-api-call request-url (transform-query-connections-response (f/unparse z-date-formatter date)))))
 
     
