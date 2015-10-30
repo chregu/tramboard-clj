@@ -5,6 +5,7 @@
             [clj-time.format :as f]
             [clojure.string :as str]
             [org.httpkit.client :as http]
+            [clojure.java.jdbc :refer :all]
             [clojure.tools.html-utils :as html]))
 
 (def query-stations-base-url "http://online.fahrplan.zvv.ch/bin/ajax-getstop.exe/dny?start=1&tpl=suggest2json&REQ0JourneyStopsS0A=7&getstop=1&noSession=yes&REQ0JourneyStopsB=25&REQ0JourneyStopsS0G=")
@@ -18,6 +19,12 @@
 (def date-formatter (f/with-zone (f/formatter "YYYY-MM-dd") zvv-timezone))
 (def time-formatter (f/with-zone (f/formatter "HH:mm") zvv-timezone))
 (def z-date-formatter (f/with-zone (f/formatter "YYYY-MM-dd'T'HH:mm:ssZ") zvv-timezone)) ; FIX SOMERTIME
+
+(def db
+  {:classname   "org.sqlite.JDBC"
+   :subprotocol "sqlite"
+   :subname     "stations.sqlite"
+   })
 
 
 (defn- sanitize [text]
@@ -48,6 +55,10 @@
     (when (not (or (empty? date) (empty? time)))
       (format-date date time))))
 
+(defn-  zvv-to-sbb-id [id]
+(let [sbbid (first (query db (str "select sbb_id from zvv_to_sbb where zvv_id = " id )))]
+    (if (nil? sbbid) nil (:sbb_id sbbid))))
+   
 ; TODO add 1 day to realtime if it is smaller than scheduled (scheduled 23h59 + 3min delay ...)
 (defn- zvv-departure [zvv-journey]
   (let [product         (zvv-journey "product")
@@ -58,6 +69,9 @@
         attributes-bfr  (zvv-journey "attributes_bfr")
         timestamp       (zvv-date main-location)
         timestamprt     (zvv-date (main-location "realTime"))
+        last-location   (last (zvv-journey "locations")) 
+        last-location-id ((last-location "location") "id") 
+        last-location-id-nr (read-string last-location-id)
         ]
     {:name (sanitize line)
      :type (map-category (product "icon"))
@@ -65,6 +79,7 @@
      :colors {:fg (str "#" (color "fg"))
               :bg (str "#" (color "bg"))}
      :to (html/xml-decode (product "direction"))
+     :id (if (and (< last-location-id-nr 300000) (> last-location-id-nr 290000)) (zvv-to-sbb-id last-location-id) last-location-id ) ; zvv has sometimes it's internal ids on some stations
      :platform (if (= platform "") nil platform)
      :dt (or timestamprt timestamp)
      :departure {:scheduled timestamp
@@ -99,7 +114,7 @@
           departure (or (passlist "departure") (passlist "arrival"))
           coord  (station "coordinate")]
     {:name (station "name")
-     :id (station "id")
+     :id (clojure.string/replace (station "id") #"^0*" "")
      :location {:lat (coord "x")
                 :lng (coord "y")}
      :departure departure}))
