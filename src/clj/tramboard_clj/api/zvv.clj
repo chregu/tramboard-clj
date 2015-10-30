@@ -108,7 +108,19 @@
         data     (json/parse-string unparsed)
         stations (data "suggestions")]
     {:stations (map zvv-station (remove #(or (nil? (% "extId")) (not= "1" (% "type"))) stations))}))
-    
+
+(defn- zvv-get-realtime [passlist]
+    (let [prognosis (passlist "prognosis")
+          prognosis-dept (or (prognosis "departure") (prognosis "arrival"))
+          could-be-realtime  (or prognosis-dept (prognosis "capacity1st"))          
+          ]
+    (if (nil? could-be-realtime) 
+        nil 
+        (if (nil? prognosis-dept)
+            (or (passlist "departure") (passlist "arrival"))
+            prognosis-dept
+            ))))
+            
 (defn- zvv-passlist [passlist]
     (let [station  (passlist "station")
           departure (or (passlist "departure") (passlist "arrival"))
@@ -117,7 +129,8 @@
      :id (clojure.string/replace (station "id") #"^0*" "")
      :location {:lat (coord "x")
                 :lng (coord "y")}
-     :departure departure}))
+     :departure {:scheduled departure
+                 :realtime (zvv-get-realtime passlist)}}))
 
 (defn- zvv-section [section]
     (let [passlist (map zvv-passlist ((section "journey") "passList"))]
@@ -134,7 +147,7 @@
   (let [data     (json/parse-string response-body)
         connections (->> (data "connections")
                          (map zvv-connection)
-                         (filter #(if (= (:departure (first %)) date) true false)) 
+                         (filter #(if (= (:scheduled (:departure (first %))) date) true false))
                          )]
     {:passlist connections})))
 
