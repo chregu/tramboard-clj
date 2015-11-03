@@ -58,7 +58,7 @@
 (defn-  zvv-to-sbb-id [id]
 (let [sbbid (first (query db (str "select sbb_id from zvv_to_sbb where zvv_id = " id )))]
     (if (nil? sbbid) nil (:sbb_id sbbid))))
-   
+
 ; TODO add 1 day to realtime if it is smaller than scheduled (scheduled 23h59 + 3min delay ...)
 (defn- zvv-departure [zvv-journey]
   (let [product         (zvv-journey "product")
@@ -69,8 +69,8 @@
         attributes-bfr  (zvv-journey "attributes_bfr")
         timestamp       (zvv-date main-location)
         timestamprt     (zvv-date (main-location "realTime"))
-        last-location   (last (zvv-journey "locations")) 
-        last-location-id ((last-location "location") "id") 
+        last-location   (last (zvv-journey "locations"))
+        last-location-id ((last-location "location") "id")
         last-location-id-nr (read-string last-location-id)
         ]
     {:name (sanitize line)
@@ -112,15 +112,13 @@
 (defn- zvv-get-realtime [passlist]
     (let [prognosis (passlist "prognosis")
           prognosis-dept (or (prognosis "departure") (prognosis "arrival"))
-          could-be-realtime  (or prognosis-dept (prognosis "capacity1st"))          
-          ]
-    (if (nil? could-be-realtime) 
-        nil 
-        (if (nil? prognosis-dept)
+          could-be-realtime  (= (passlist "realtimeAvailability") "RT_BHF")]
+      (if (some? prognosis-dept)
+        prognosis-dept
+        (if could-be-realtime
             (or (passlist "departure") (passlist "arrival"))
-            prognosis-dept
-            ))))
-            
+            nil))))
+
 (defn- zvv-passlist [passlist]
     (let [station  (passlist "station")
           departure (or (passlist "departure") (passlist "arrival"))
@@ -145,16 +143,24 @@
 (defn transform-query-connections-response [date]
   (fn [response-body]
   (let [data     (json/parse-string response-body)
-        connections (->> (data "connections")
+        got-useful-response (some? data)
+        connections (if got-useful-response
+                      (->> (data "connections")
                          (map zvv-connection)
                          (filter #(if (= (:scheduled (:departure (first %))) date) true false))
-                         )]
+                         )
+                      [])]
     {:passlist connections})))
 
 ; TODO error handling
 (defn- do-api-call [url transform-fn]
-  (let [response    (http/get url)]
-    (transform-fn (:body @response))))
+  (let [response (http/get url)
+        status (:status @response)]
+    (if (= status 200)
+      (transform-fn (:body @response))
+      {:error "error"
+       :status status
+       :url url})))
 
 (defn station [id sbbid]
   (let [request-url (str station-base-url id)]
@@ -163,13 +169,13 @@
 (defn query-stations [query]
   (let [request-url (str query-stations-base-url (codec/url-encode query))]
     (do-api-call request-url transform-query-stations-response)))
-    
+
 (defn query-connections [from to datetime]
   (let [date (f/parse input-datetime-formatter datetime)
         date-10 (t/plus date (t/minutes -10))
         request-url (str query-connections-base-url "from=" (codec/url-encode from) "&to=" (codec/url-encode to) "&date=" (codec/url-encode (f/unparse  date-formatter date-10)) "&time=" (codec/url-encode (f/unparse  time-formatter date-10)))]
-        
+
         (do-api-call request-url (transform-query-connections-response (f/unparse z-date-formatter date)))))
 
-    
-  
+
+
