@@ -84,33 +84,31 @@
 
       [:h2 {:class "thin text-center"} [:a {:href "http://twitter.com/time4coffeeApp"} "Get in touch "] " & " [:a {:href "http://github.com/timeforcoffee/"} "contribute!"] ]]]))
 
-      
+
 
 (defn- get-api-key [id]
   (let [stripped_id (clojure.string/replace id #"^0*" "")]
   (first (query db (str "select zapikey as apikey, zapiid as apiid from ZTFCSTATIONMODEL where ZID = " stripped_id)))))
-   
+
 (defn- apikey-lookup-in-db [api id]
     (let [apikeys-result (get-api-key id)
           apikey (if (or (nil? apikeys-result) (nil? (apikeys-result :apikey))) fallback-api (apikeys-result :apikey))
           apiid (if (or (nil? apikeys-result) (nil? (apikeys-result :apiid))) id (apikeys-result :apiid))
           apikeys {:apikey apikey :apiid apiid}
     ]
-    apikeys
-    ))
+    apikeys))
 
-(defn- apikey-lookup [api id] 
+(defn- apikey-lookup [api id]
     (if (= api "ch") (apikey-lookup-in-db api id) {:apikey api :apiid id}))
 
 (defn- sbb-id-lookup [api id]
-    (if (= api "ch") id nil)
-    )
+    (if (= api "ch") id nil))
 
 (defn station* [api id]
   (let [apikey (apikey-lookup api id)]
   {:headers {"Content-Type" "application/json; charset=utf-8"}
    :body ((resolve (symbol (str "tramboard-clj.api." (apikey :apikey) "/station"))) (apikey :apiid) (sbb-id-lookup api id))}))
-   
+
 (defn- query-stations* [api query]
   (let [apikey (if (= api "ch") fallback-api api)]
   {:headers {"Content-Type" "application/json; charset=utf-8"}
@@ -120,13 +118,19 @@
   (let [apikey (if (= api "ch") fallback-api api)]
   {:headers {"Content-Type" "application/json; charset=utf-8"}
    :body ((resolve (symbol (str "tramboard-clj.api." apikey "/query-connections"))) from to datetime)}))
-   
+
+(defn- query-connections-with-arrival* [api from to datetime arrivaltime]
+  (let [apikey (if (= api "ch") fallback-api api)]
+    {:headers {"Content-Type" "application/json; charset=utf-8"}
+     :body ((resolve (symbol (str "tramboard-clj.api." apikey "/query-connections-with-arrival"))) from to datetime arrivaltime)}))
+
 (definterface INR
   (indexPage        [])
   (aboutPage        [])
   (station          [api id])
   (queryStations    [api query])
-  (queryConnections [api from to datetime]))
+  (queryConnections [api from to datetime])
+  (queryConnectionsWithArrival [api from to datetime arrivaltime]))
 
 (deftype NR []
   INR
@@ -135,7 +139,8 @@
   (^{Trace {}} aboutPage        [_]       (about-page*))
   (^{Trace {}} station          [_ api id]           (station* api id))
   (^{Trace {}} queryStations    [_ api query]        (query-stations* api query))
-  (^{Trace {}} queryConnections [_ api from to datetime] (query-connections* api from to datetime)))
+  (^{Trace {}} queryConnections [_ api from to datetime] (query-connections* api from to datetime))
+  (^{Trace {}} queryConnectionsWithArrival [_ api from to datetime arrivaltime] (query-connections-with-arrival* api from to datetime arrivaltime)))
 
 (def ^:private nr (NR.))
 
@@ -144,3 +149,4 @@
 (defn station           [api id]           (.station nr api id))
 (defn query-stations    [api query]        (.queryStations nr api query))
 (defn query-connections [api from to datetime] (.queryConnections nr api from to datetime))
+(defn query-connections-with-arrival [api from to datetime arrivaltime] (.queryConnectionsWithArrival nr api from to datetime arrivaltime))
