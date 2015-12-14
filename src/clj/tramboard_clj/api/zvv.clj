@@ -11,7 +11,6 @@
 (def query-stations-base-url "http://online.fahrplan.zvv.ch/bin/ajax-getstop.exe/dny?start=1&tpl=suggest2json&REQ0JourneyStopsS0A=7&getstop=1&noSession=yes&REQ0JourneyStopsB=25&REQ0JourneyStopsS0G=")
 (def station-base-url        "http://online.fahrplan.zvv.ch/bin/stboard.exe/dny?dirInput=&maxJourneys=100&boardType=dep&start=1&tpl=stbResult2json&input=")
 (def query-connections-base-url "http://transport.opendata.ch/v1/connections?limit=5&direct=1&")
-;(def query-connections-base-url "http://localhost/connections.json?")
 (def zvv-timezone (t/time-zone-for-id "Europe/Zurich"))
 
 (def zvv-date-formatter (f/with-zone (f/formatter "dd.MM.yy HH:mm") zvv-timezone))
@@ -58,7 +57,7 @@
 (defn-  zvv-to-sbb-id [id]
 (let [sbbid (first (query db (str "select sbb_id from zvv_to_sbb where zvv_id = " id )))]
     (if (nil? sbbid) nil (:sbb_id sbbid))))
-   
+
 ; TODO add 1 day to realtime if it is smaller than scheduled (scheduled 23h59 + 3min delay ...)
 (defn- zvv-departure [zvv-journey]
   (let [product         (zvv-journey "product")
@@ -69,9 +68,10 @@
         attributes-bfr  (zvv-journey "attributes_bfr")
         timestamp       (zvv-date main-location)
         timestamprt     (zvv-date (main-location "realTime"))
-        last-location   (last (zvv-journey "locations")) 
-        last-location-id ((last-location "location") "id") 
+        last-location   (last (zvv-journey "locations"))
+        last-location-id ((last-location "location") "id")
         last-location-id-nr (read-string last-location-id)
+        last-location-arrival (zvv-date last-location)
         ]
     {:name (sanitize line)
      :type (map-category (product "icon"))
@@ -83,7 +83,8 @@
      :platform (if (= platform "") nil platform)
      :dt (or timestamprt timestamp)
      :departure {:scheduled timestamp
-                 :realtime timestamprt}}))
+                 :realtime timestamprt}
+     :arrival {:scheduled last-location-arrival}}))
 
 ; TODO tests (=> capture some data from zvv api)
 (defn transform-station-response [id]
@@ -112,15 +113,14 @@
 (defn- zvv-get-realtime [passlist]
     (let [prognosis (passlist "prognosis")
           prognosis-dept (or (prognosis "departure") (prognosis "arrival"))
-          could-be-realtime  (or prognosis-dept (prognosis "capacity1st"))          
+          could-be-realtime  (or prognosis-dept (prognosis "capacity1st"))
           ]
-    (if (nil? could-be-realtime) 
-        nil 
+    (if (nil? could-be-realtime)
+        nil
         (if (nil? prognosis-dept)
             (or (passlist "departure") (passlist "arrival"))
-            prognosis-dept
-            ))))
-            
+            prognosis-dept))))
+
 (defn- zvv-passlist [passlist]
     (let [station  (passlist "station")
           departure (or (passlist "departure") (passlist "arrival"))
@@ -142,14 +142,23 @@
                         (map zvv-section))]
        (first sections)))
 
-(defn transform-query-connections-response [date]
+(defn transform-query-connections-response [date arrivaldate]
   (fn [response-body]
   (let [data     (json/parse-string response-body)
         connections (->> (data "connections")
                          (map zvv-connection)
-                         (filter #(if (= (:scheduled (:departure (first %))) date) true false))
-                         )]
-    {:passlist connections})))
+                         (filter #(if (= (:scheduled (:departure (first %))) date) true false)))
+        ; If we have more than one connection with the same departure time, filter
+        ; according to the arrival time if we have that (example is "Zurich -> Zug" where
+        ; 2 trains start at xx:04 to Zug, the S9 and an IR
+        connections-arrival-filtered (if (and (some? arrivaldate) (> (count connections) 1))
+                                       (filter #(if (= (:scheduled (:departure (last %))) arrivaldate) true false) connections) connections)
+        ; If we couldn't find a match with arrivaltime, just return the inital connections
+        ;  Better this than nothing
+        connections-final (if (= (count connections-arrival-filtered) 0)
+                            connections
+                            connections-arrival-filtered)]
+    {:passlist connections-final})))
 
 ; TODO error handling
 (defn- do-api-call [url transform-fn]
@@ -163,13 +172,19 @@
 (defn query-stations [query]
   (let [request-url (str query-stations-base-url (codec/url-encode query))]
     (do-api-call request-url transform-query-stations-response)))
-    
+
 (defn query-connections [from to datetime]
   (let [date (f/parse input-datetime-formatter datetime)
         date-10 (t/plus date (t/minutes -10))
-        request-url (str query-connections-base-url "from=" (codec/url-encode from) "&to=" (codec/url-encode to) "&date=" (codec/url-encode (f/unparse  date-formatter date-10)) "&time=" (codec/url-encode (f/unparse  time-formatter date-10)))]
-        
-        (do-api-call request-url (transform-query-connections-response (f/unparse z-date-formatter date)))))
+        request-url (str query-connections-base-url "from=" (codec/url-encode from) "&to=" (codec/url-encode to) "&date=" (codec/url-encode (f/unparse date-formatter date-10)) "&time=" (codec/url-encode (f/unparse time-formatter date-10)))]
+    (do-api-call request-url (transform-query-connections-response (f/unparse z-date-formatter date) nil))))
 
-    
-  
+(defn query-connections-with-arrival [from to datetime arrivaltime]
+  (let [date (f/parse input-datetime-formatter datetime)
+        arrivaldate (f/parse input-datetime-formatter arrivaltime)
+        date-10 (t/plus date (t/minutes -10))
+        request-url (str query-connections-base-url "from=" (codec/url-encode from) "&to=" (codec/url-encode to) "&date=" (codec/url-encode (f/unparse date-formatter date-10)) "&time=" (codec/url-encode (f/unparse time-formatter date-10)))]
+    (do-api-call request-url (transform-query-connections-response (f/unparse z-date-formatter date) (f/unparse z-date-formatter arrivaldate)))))
+
+
+
