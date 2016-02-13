@@ -140,7 +140,7 @@
 
 ; TODO error handling
 (defn station [id sbbid request-url get-hash]
-  (let [request-url-sbb (str zvv/station-base-url sbbid)]
+  (let [request-url-sbb (zvv/zvv-station-url sbbid)]
     (if (nil? sbbid)
       (do-api-call request-url transform-station-response)
       (do-api-call2 request-url transform-station-response  request-url-sbb (zvv/transform-station-response sbbid) get-hash))))
