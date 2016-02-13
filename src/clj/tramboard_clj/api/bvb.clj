@@ -11,10 +11,46 @@
     (str "t" (digest/md5 (str (subs (clojure.string/replace (vblbvb/map-station-name (dept :to)) "^Basel " "" ) 1 3) (dept :name)((dept :departure) :scheduled)))))
 
 
+; BVB doesn't send tram colors... 
+; I'm sure there's an easier way to this than with 3
+;  functions, but hey, it works ;)
+(defn- map-color [color dept]
+(if (= (:type dept) "tram")                           
+(case (:name dept)
+    "1" {:fg "#FFFFFF" :bg "#845234"}
+    "2" {:fg "#FFFFFF" :bg "#A7844D"}
+    "3" {:fg "#FFFFFF" :bg "#304BA3"}
+    "6" {:fg "#FFFFFF" :bg "#0070BF"}
+    "8" {:fg "#000000" :bg "#F47AB1"}
+    "10" {:fg "#000000" :bg "#FFCB00"}
+    "11" {:fg "#FFFFFF" :bg "#F11714"}
+    "14" {:fg "#000000" :bg "#F78200"}
+    "15" {:fg "#FFFFFF" :bg "#00A64B"}
+    "16" {:fg "#000000" :bg "#A5D027"}
+    "17" {:fg "#FFFFFF" :bg "#00ADF2"}
+    "E11" {:fg "#FFFFFF" :bg "#F11714"}
+    "21" {:fg "#FFFFFF" :bg "#00AF9D"}
+    {:fg "#000000" :bg "#FFFFFF"})
+    
+    {:fg "#000000" :bg "#FFFFFF"}
+))
+    
+
+(defn- update-single-colors [dept]
+    (update-in dept [:colors] map-color dept
+))
+
+(defn- update-colors [depts] 
+    (map update-single-colors depts)
+)
+    
 ; TODO error handling
 (defn station [id sbbid]
-  (let [request-url (str station-base-url id)]
-        (vblbvb/station id sbbid request-url get-hash)))
+  (let [request-url (str station-base-url id)
+        orig-return (vblbvb/station id sbbid request-url get-hash)
+        with-bvb-colors (update-in orig-return [:departures ] update-colors)
+  ]
+      with-bvb-colors  ))
 
 (defn query-stations [query]
   (let [request-url (str query-stations-base-url (codec/url-encode query))]
