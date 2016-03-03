@@ -110,30 +110,49 @@
         stations (data "suggestions")]
     {:stations (map zvv-station (remove #(or (nil? (% "extId")) (not= "1" (% "type"))) stations))}))
 
-(defn- zvv-get-realtime [passlist]
+(defn- zvv-get-realtime [passlist deptOrArr]
     (let [prognosis (passlist "prognosis")
-          prognosis-dept (or (prognosis "departure") (prognosis "arrival"))
+          prognosis-dept (prognosis deptOrArr)
           could-be-realtime  (= (passlist "realtimeAvailability") "RT_BHF")]
       (if (some? prognosis-dept)
         prognosis-dept
         (if could-be-realtime
-            (or (passlist "departure") (passlist "arrival"))
+            (passlist deptOrArr)
             nil))))
 
+(defn- zvv-passlist-remove-same [passlist]
+    (let [departure (:departure passlist )
+          arrival   (:arrival passlist )]
+    
+          (if (and (= (:scheduled departure) (:scheduled arrival))
+                   (= (:realtime departure)  (:realtime arrival))
+          ) 
+            (dissoc passlist :arrival)
+            ; the if nil? assoc can be removed, when time for coffee 1.9.1 is release 
+            (if (nil? (:scheduled departure))
+                (assoc passlist :departure arrival)
+                passlist
+                )
+            )))
+
 (defn- zvv-passlist [passlist]
-    (let [station  (passlist "station")
-          departure (or (passlist "departure") (passlist "arrival"))
+    (let [station   (passlist "station")
+          departure (passlist "departure")
+          arrival   (passlist "arrival")
           coord  (station "coordinate")]
     {:name (station "name")
      :id (clojure.string/replace (station "id") #"^0*" "")
      :location {:lat (coord "x")
                 :lng (coord "y")}
      :departure {:scheduled departure
-                 :realtime (zvv-get-realtime passlist)}}))
+                 :realtime (zvv-get-realtime passlist "departure")}
+     :arrival {:scheduled arrival
+                 :realtime (zvv-get-realtime passlist "arrival")}
+                 }))
 
 (defn- zvv-section [section]
     (let [passlist (map zvv-passlist ((section "journey") "passList"))]
-     passlist))
+     (map zvv-passlist-remove-same passlist)))
 
 (defn- zvv-connection [connection]
     (let [sections (->> (connection "sections")
@@ -144,12 +163,9 @@
 (defn transform-query-connections-response [date arrivaldate]
   (fn [response-body]
   (let [data     (json/parse-string response-body)
-        got-useful-response (some? data)
-        connections (if got-useful-response
-                      (->> (data "connections")
+        connections (->> (data "connections")
                          (map zvv-connection)
                          (filter #(if (= (:scheduled (:departure (first %))) date) true false)))
-                      [])
         ; If we have more than one connection with the same departure time, filter
         ; according to the arrival time if we have that (example is "Zurich -> Zug" where
         ; 2 trains start at xx:04 to Zug, the S9 and an IR
@@ -164,13 +180,8 @@
 
 ; TODO error handling
 (defn- do-api-call [url transform-fn]
-  (let [response (http/get url)
-        status (:status @response)]
-    (if (= status 200)
-      (transform-fn (:body @response))
-      {:error "error"
-       :status status
-       :url url})))
+  (let [response    (http/get url)]
+    (transform-fn (:body @response))))
 
 (defn station [id sbbid]
   (let [request-url (str station-base-url id)]
@@ -192,7 +203,6 @@
         date-10 (t/plus date (t/minutes -10))
         request-url (str query-connections-base-url "from=" (codec/url-encode from) "&to=" (codec/url-encode to) "&date=" (codec/url-encode (f/unparse date-formatter date-10)) "&time=" (codec/url-encode (f/unparse time-formatter date-10)))]
     (do-api-call request-url (transform-query-connections-response (f/unparse z-date-formatter date) (f/unparse z-date-formatter arrivaldate)))))
-
 
 
 
