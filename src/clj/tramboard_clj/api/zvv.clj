@@ -110,31 +110,49 @@
         stations (data "suggestions")]
     {:stations (map zvv-station (remove #(or (nil? (% "extId")) (not= "1" (% "type"))) stations))}))
 
-(defn- zvv-get-realtime [passlist]
+(defn- zvv-get-realtime [passlist deptOrArr]
     (let [prognosis (passlist "prognosis")
-          prognosis-dept (or (prognosis "departure") (prognosis "arrival"))
-          could-be-realtime  (or prognosis-dept (prognosis "capacity1st"))
-          ]
-    (if (nil? could-be-realtime)
-        nil
-        (if (nil? prognosis-dept)
-            (or (passlist "departure") (passlist "arrival"))
-            prognosis-dept))))
+          prognosis-dept (prognosis deptOrArr)
+          could-be-realtime  (= (passlist "realtimeAvailability") "RT_BHF")]
+      (if (some? prognosis-dept)
+        prognosis-dept
+        (if could-be-realtime
+            (passlist deptOrArr)
+            nil))))
+
+(defn- zvv-passlist-remove-same [passlist]
+    (let [departure (:departure passlist )
+          arrival   (:arrival passlist )]
+    
+          (if (and (= (:scheduled departure) (:scheduled arrival))
+                   (= (:realtime departure)  (:realtime arrival))
+          ) 
+            (dissoc passlist :arrival)
+            ; the if nil? assoc can be removed, when time for coffee 1.9.1 is release 
+            (if (nil? (:scheduled departure))
+                (assoc passlist :departure arrival)
+                passlist
+                )
+            )))
 
 (defn- zvv-passlist [passlist]
-    (let [station  (passlist "station")
-          departure (or (passlist "departure") (passlist "arrival"))
+    (let [station   (passlist "station")
+          departure (passlist "departure")
+          arrival   (passlist "arrival")
           coord  (station "coordinate")]
     {:name (station "name")
      :id (clojure.string/replace (station "id") #"^0*" "")
      :location {:lat (coord "x")
                 :lng (coord "y")}
      :departure {:scheduled departure
-                 :realtime (zvv-get-realtime passlist)}}))
+                 :realtime (zvv-get-realtime passlist "departure")}
+     :arrival {:scheduled arrival
+                 :realtime (zvv-get-realtime passlist "arrival")}
+                 }))
 
 (defn- zvv-section [section]
     (let [passlist (map zvv-passlist ((section "journey") "passList"))]
-     passlist))
+     (map zvv-passlist-remove-same passlist)))
 
 (defn- zvv-connection [connection]
     (let [sections (->> (connection "sections")
