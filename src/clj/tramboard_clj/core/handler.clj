@@ -23,6 +23,11 @@
     (let [resp (h req)]
       (assoc-in resp [:headers "cache-control"] "public"))))
 
+(defn wrap-cache-10-sec [h]
+  (fn [req]
+    (let [resp (h req)]
+      (assoc-in resp [:headers "cache-control"] "public, max-age=10"))))
+
 (defn wrap-error [h]
   (fn [req]
     (let [resp (h req)]
@@ -32,10 +37,10 @@
 
 (defroutes api-routes
   (context "/api" []
-    (wrap-routes (wrap-routes (GET "/:api/stationboard/:id{.+}" [api id] (station api id)) wrap-json-response) wrap-no-cache)
-    (wrap-routes (wrap-routes (wrap-routes (GET "/:api/connections/:from{.+}/:to{.+}/:datetime{.+}/:arrivaltime{.+}" [api from to datetime arrivaltime] (query-connections-with-arrival api from to datetime arrivaltime)) wrap-json-response) wrap-no-cache) wrap-error)
-    (wrap-routes (wrap-routes (wrap-routes (GET "/:api/connections/:from{.+}/:to{[^/]+}/:datetime{.+}" [api from to datetime] (query-connections api from to datetime)) wrap-json-response) wrap-no-cache) wrap-error)
-    (wrap-routes (wrap-routes (GET "/:api/stations/:query{.+}" [api query] (query-stations api query)) wrap-json-response) wrap-no-cache)))
+    (wrap-routes (wrap-routes (GET "/:api/stationboard/:id{.+}" [api id] (station api id)) wrap-json-response) wrap-cache-10-sec)
+    (wrap-routes (wrap-routes (wrap-routes (GET "/:api/connections/:from{.+}/:to{.+}/:datetime{.+}/:arrivaltime{.+}" [api from to datetime arrivaltime] (query-connections-with-arrival api from to datetime arrivaltime)) wrap-json-response) wrap-cache-10-sec) wrap-error)
+    (wrap-routes (wrap-routes (wrap-routes (GET "/:api/connections/:from{.+}/:to{[^/]+}/:datetime{.+}" [api from to datetime] (query-connections api from to datetime)) wrap-json-response) wrap-cache-10-sec) wrap-error)
+    (wrap-routes (wrap-routes (GET "/:api/stations/:query{.+}" [api query] (query-stations api query)) wrap-json-response) wrap-cache)))
 
 (defroutes app-routes
   (wrap-routes (GET "/"      [] (index-page)) wrap-cache)
