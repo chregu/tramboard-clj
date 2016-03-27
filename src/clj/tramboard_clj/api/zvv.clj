@@ -9,7 +9,7 @@
             [clojure.tools.html-utils :as html]))
 
 (def query-stations-base-url "http://online.fahrplan.zvv.ch/bin/ajax-getstop.exe/dny?start=1&tpl=suggest2json&REQ0JourneyStopsS0A=7&getstop=1&noSession=yes&REQ0JourneyStopsB=25&REQ0JourneyStopsS0G=")
-(def station-base-url        "http://online.fahrplan.zvv.ch/bin/stboard.exe/dny?dirInput=&maxJourneys=100&boardType=dep&start=1&tpl=stbResult2json&input=")
+(def station-base-url        "http://online.fahrplan.zvv.ch/bin/stboard.exe/dny?dirInput=&boardType=dep&start=1&tpl=stbResult2json&input=")
 (def query-connections-base-url "http://transport.opendata.ch/v1/connections?limit=5&direct=1&")
 (def zvv-timezone (t/time-zone-for-id "Europe/Zurich"))
 
@@ -44,6 +44,18 @@
     ;"GB"     "cable-car"
 
     "train"))
+
+(defn- station-limit [id]
+  (case (clojure.string/replace id #"^0*" "")
+    "8503000" "200"                                         ; Zürich HB
+    "8507000" "200"                                         ; Bern
+    "8507785" "200"                                         ; Bern Hauptbahnof
+    "8500010" "200"                                         ; Basel SBB
+    "22"  "200"                                             ; Basel
+    "8505000" "200"                                         ; Luzern
+    "100"
+    )
+  )
 
 (defn- format-date [date time]
   (str (f/parse zvv-date-formatter (str date " " time))))
@@ -163,9 +175,12 @@
 (defn transform-query-connections-response [date arrivaldate]
   (fn [response-body]
   (let [data     (json/parse-string response-body)
-        connections (->> (data "connections")
+        got-useful-response (some? data)
+        connections (if got-useful-response
+                      (->> (data "connections")
                          (map zvv-connection)
                          (filter #(if (= (:scheduled (:departure (first %))) date) true false)))
+                      [])
         ; If we have more than one connection with the same departure time, filter
         ; according to the arrival time if we have that (example is "Zurich -> Zug" where
         ; 2 trains start at xx:04 to Zug, the S9 and an IR
@@ -180,11 +195,19 @@
 
 ; TODO error handling
 (defn- do-api-call [url transform-fn]
-  (let [response    (http/get url)]
-    (transform-fn (:body @response))))
+  (let [response (http/get url)
+        status (:status @response)]
+    (if (= status 200)
+      (transform-fn (:body @response))
+      {:error "error"
+       :status status
+       :url url})))
+
+(defn zvv-station-url [id]
+  (str station-base-url id "&maxJourneys=" (station-limit id)))
 
 (defn station [id sbbid]
-  (let [request-url (str station-base-url id)]
+  (let [request-url (zvv-station-url id)]
     (do-api-call request-url (transform-station-response id))))
 
 (defn query-stations [query]

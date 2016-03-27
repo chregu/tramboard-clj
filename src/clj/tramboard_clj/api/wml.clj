@@ -158,7 +158,7 @@
   (let [stripped_id (clojure.string/replace id #"^0*" "")
         newid (subs stripped_id 2 (count stripped_id))
         request-url (station-base-url (add-luhny-digit newid))
-        request-url-sbb (str zvv/station-base-url sbbid)]
+        request-url-sbb (zvv/zvv-station-url sbbid)]
     (if (nil? sbbid)
       (c/do-api-call request-url (transform-station-response id))
       (c/do-api-call2 request-url (transform-station-response id)  request-url-sbb (zvv/transform-station-response sbbid) get-hash))))
