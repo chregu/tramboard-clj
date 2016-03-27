@@ -16,8 +16,7 @@
 (defn- vbl-parse-datetime [timestamp]
   (if (or (nil? timestamp) (= "" timestamp))
     nil
-    (str (f/parse vbl-date-formatter timestamp))))
-
+    (try (str (f/parse vbl-date-formatter timestamp)) (catch Exception e nil))))
 
 (defn zip-str [s]
   (zip/xml-zip 
@@ -88,8 +87,10 @@
   (let [data           (zip-str (clojure.string/replace  response-body "encoding=\"ISO-8859-1\"" ""))
         journeys       (xml-> data :dps :dp)
         station        (xml1-> data :dps :dp)]
-    {:meta {:station_id (xml1-> station :r :id text )
-            :station_name (xml1-> station :n text )}
+    {:meta (if (nil? station) 
+            {}
+            {:station_id (xml1-> station :r :id text )
+             :station_name (xml1-> station :n text )})
      :departures (map vbl-departure  journeys)}
     ))
 

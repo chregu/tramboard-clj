@@ -38,8 +38,8 @@
 (defn- wml-parse-datetime [timestamp]
   (if (nil? timestamp)
     nil
-    (str (-> (f/parse wml-date-formatter timestamp) .secondOfMinute .withMinimumValue))))
-
+    (try (str (-> (f/parse wml-date-formatter timestamp) .secondOfMinute .withMinimumValue)) (catch Exception e nil))))
+    
 (defn hexy
 "This will convert the bytes to CSS RGB Value"
   ([x] (hexy (nth x 0) (nth x 1) (nth x 2)))
@@ -78,8 +78,8 @@
    )
 )
 
-(defn- format-date [date time]
-  (str (f/parse wml-date-formatter (str date " " time))))
+(defn- format-date [date time]  
+  (try (str (f/parse wml-date-formatter (str date " " time))) (catch Exception e nil)))
 
 (defn- format-place [data]
   (let [place (data "place")

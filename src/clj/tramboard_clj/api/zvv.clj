@@ -58,7 +58,7 @@
   )
 
 (defn- format-date [date time]
-  (str (f/parse zvv-date-formatter (str date " " time))))
+  (try (str (f/parse zvv-date-formatter (str date " " time))) (catch Exception e nil)))
 
 (defn- zvv-date [input]
   (let [date (input "date")
