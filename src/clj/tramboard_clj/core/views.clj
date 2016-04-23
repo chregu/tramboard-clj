@@ -109,6 +109,11 @@
   {:headers {"Content-Type" "application/json; charset=utf-8"}
    :body ((resolve (symbol (str "tramboard-clj.api." (apikey :apikey) "/station"))) (apikey :apiid) (sbb-id-lookup api id))}))
 
+(defn station-with-time* [api id datetime]
+  (let [apikey (apikey-lookup api id)]
+  {:headers {"Content-Type" "application/json; charset=utf-8"}
+   :body ((resolve (symbol (str "tramboard-clj.api." (apikey :apikey) "/station-with-time"))) (apikey :apiid) (sbb-id-lookup api id) datetime)}))
+
 (defn- query-stations* [api query]
   (let [apikey (if (= api "ch") fallback-api api)]
   {:headers {"Content-Type" "application/json; charset=utf-8"}
@@ -128,6 +133,7 @@
   (indexPage        [])
   (aboutPage        [])
   (station          [api id])
+  (stationWithTime  [api id datetime])
   (queryStations    [api query])
   (queryConnections [api from to datetime])
   (queryConnectionsWithArrival [api from to datetime arrivaltime]))
@@ -138,6 +144,7 @@
   (^{Trace {}} indexPage        [_]       (index-page*))
   (^{Trace {}} aboutPage        [_]       (about-page*))
   (^{Trace {}} station          [_ api id]           (station* api id))
+  (^{Trace {}} stationWithTime  [_ api id datetime]  (station-with-time* api id datetime))
   (^{Trace {}} queryStations    [_ api query]        (query-stations* api query))
   (^{Trace {}} queryConnections [_ api from to datetime] (query-connections* api from to datetime))
   (^{Trace {}} queryConnectionsWithArrival [_ api from to datetime arrivaltime] (query-connections-with-arrival* api from to datetime arrivaltime)))
@@ -147,6 +154,7 @@
 (defn index-page        []                 (.indexPage nr))
 (defn about-page        []                 (.aboutPage nr))
 (defn station           [api id]           (.station nr api id))
+(defn station-with-time [api id datetime]  (.stationWithTime nr api id datetime))
 (defn query-stations    [api query]        (.queryStations nr api query))
 (defn query-connections [api from to datetime] (.queryConnections nr api from to datetime))
 (defn query-connections-with-arrival [api from to datetime arrivaltime] (.queryConnectionsWithArrival nr api from to datetime arrivaltime))

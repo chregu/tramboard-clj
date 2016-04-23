@@ -16,6 +16,7 @@
 (def zvv-date-formatter (f/with-zone (f/formatter "dd.MM.yy HH:mm") zvv-timezone))
 (def input-datetime-formatter (f/with-zone (f/formatter "YYYY-MM-dd'T'HH:mm") zvv-timezone))
 (def date-formatter (f/with-zone (f/formatter "YYYY-MM-dd") zvv-timezone))
+(def date-formatter-dot (f/with-zone (f/formatter "dd.MM.YY") zvv-timezone))
 (def time-formatter (f/with-zone (f/formatter "HH:mm") zvv-timezone))
 (def z-date-formatter (f/with-zone (f/formatter "YYYY-MM-dd'T'HH:mm:ssZ") zvv-timezone)) ; FIX SOMERTIME
 
@@ -208,8 +209,14 @@
 
 (defn station [id sbbid]
   (let [request-url (zvv-station-url id)]
-    (do-api-call request-url (transform-station-response id))))
+  (do-api-call request-url (transform-station-response id))))
 
+(defn station-with-time [id sbbid datetime]
+  (let [request-url (zvv-station-url id)
+        datetime2 (f/parse input-datetime-formatter datetime)
+        request-url-with-time (str request-url "&date=" (codec/url-encode (f/unparse date-formatter-dot datetime2)) "&time=" (codec/url-encode (f/unparse time-formatter datetime2)))]
+    (do-api-call request-url-with-time (transform-station-response id))))
+  
 (defn query-stations [query]
   (let [request-url (str query-stations-base-url (codec/url-encode query))]
     (do-api-call request-url transform-query-stations-response)))
