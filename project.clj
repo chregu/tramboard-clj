@@ -64,6 +64,7 @@
                        :omit-source true
                        :prep-tasks [["shell" "node_modules/.bin/gulp" "less"] "javac" "compile"]
                        :aot :all
+                       :main tramboard-clj.core.server
                        :hooks [leiningen.cljsbuild]
                        :cljsbuild {:builds {:app {:source-paths ["env/prod/src/cljs"]
                                                   :compiler {:output-to "resources/public/js/main.js"

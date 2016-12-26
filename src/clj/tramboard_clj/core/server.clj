@@ -1,4 +1,5 @@
 (ns tramboard-clj.core.server
+  (:gen-class)
   (:require [ring.adapter.jetty :as ring]
             [tramboard-clj.core.handler :as handler]))
 
