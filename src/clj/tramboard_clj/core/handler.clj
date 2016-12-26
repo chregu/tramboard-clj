@@ -50,7 +50,7 @@
   (route/not-found "404"))
 
 (def site
-  (wrap-routes app-routes wrap-defaults (assoc env-site-defaults :cookies false :session false)))
+  (wrap-routes app-routes wrap-defaults (assoc env-site-defaults :cookies false :session false :security (assoc (env-site-defaults :security) :frame-options false))))
 
 (def api
   (wrap-routes api-routes wrap-defaults api-defaults))
