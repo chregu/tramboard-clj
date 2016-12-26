@@ -26,7 +26,7 @@
 (defn wrap-cache-10-sec [h]
   (fn [req]
     (let [resp (h req)]
-      (assoc-in resp [:headers "cache-control"] "public, max-age=10"))))
+      (assoc-in resp [:headers "cache-control"] "public, max-age=20"))))
 
 (defn wrap-error [h]
   (fn [req]
