@@ -88,7 +88,7 @@
         ]
     {:name (sanitize line)
      :type (map-category (product "icon"))
-     :accessible (not (empty? (filter #(contains? #{"6" "9"} (% "code")) attributes-bfr)))
+     :accessible (not (empty? (filter #(contains? #{"6" "9" "NF"} (% "code")) attributes-bfr)))
      :colors {:fg (str "#" (color "fg"))
               :bg (str "#" (color "bg"))}
      :to (html/xml-decode (product "direction"))
