@@ -58,8 +58,8 @@
      
 ; TODO error handling
 (defn do-api-call2 [url transform-fn url2 transform-fn2 get-hash]
-  (let [response    (http/get url {:socket-timeout 2000 :conn-timeout 3000})
-        response2   (http/get url2)]
+  (let [response    (http/get url {:socket-timeout 3000 :conn-timeout 3000})
+        response2   (http/get url2 {:socket-timeout 5000 :conn-timeout 3000})]
     (combine-results (if (= 200 (:status @response)) (transform-fn (:body @response)) {:error (:status @response)}) (transform-fn2 (:body @response2)) get-hash)))
 
 (defn do-api-call [url transform-fn]
