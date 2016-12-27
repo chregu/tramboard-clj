@@ -97,6 +97,7 @@
      :dt (or timestamprt timestamp)
      :departure {:scheduled timestamp
                  :realtime timestamprt}
+     :source "zvv"
      :arrival {:scheduled last-location-arrival}}))
 
 ; TODO tests (=> capture some data from zvv api)
