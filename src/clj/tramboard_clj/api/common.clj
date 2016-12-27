@@ -18,17 +18,34 @@
   (let [departure (dept :departure)]
     {(keyword (get-hash dept)) dept}))
 
-(defn- combine-platform [x sbbentry]
-  (if (and (not (nil? sbbentry)) (not (nil? (sbbentry :platform))) (nil? (x :platform)))
-    (assoc-in x [:platform] (sbbentry :platform))
-    x))
+(defn- combine-platform [from to]
+  (if (and (not (nil? from)) (not (nil? (from :platform))) (nil? (to :platform)))
+    (assoc-in to [:platform] (from :platform))
+    to))
+
+(defn- add-arrival [from to]
+  (if (and (not (nil? from)) (not (nil? (from :arrival))) (nil? (to :arrival)))
+
+    (assoc-in (assoc-in to [:id] (from :id)) [:arrival] (from :arrival))
+    to))
+
+(defn- add-accessible [from to]
+  (if (and (not (nil? from)) (not (nil? (from :accessible))) (false? (to :accessible)))
+    (assoc-in to [:accessible] (from :accessible))
+    to))
 
 (defn- get-new-hashmap [main sbbhashmap get-hash] 
   (into {} (for [x (main :departures)
                  :let [sbbentry (sbbhashmap (keyword (get-hash x)))]]
              (if (or (nil? sbbentry) (nil? ((sbbentry :departure) :realtime)))
-               {(keyword (get-hash x)) (combine-platform x sbbentry)}
-               {(keyword (get-hash x)) sbbentry}))))
+               {(keyword (get-hash x)) (->> (combine-platform sbbentry x)
+                                             (add-accessible sbbentry)
+                                             (add-arrival sbbentry)
+                                             )
+               }
+               {(keyword (get-hash x)) (->> (combine-platform x sbbentry)
+                                            (add-accessible x)
+                                            )}))))
 
 (defn combine-results [main sbb get-hash]
   (let [sbbhashmap (into {} (map #(hash-realtime-data % get-hash) (sbb :departures)))
