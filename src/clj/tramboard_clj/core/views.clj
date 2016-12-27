@@ -103,7 +103,7 @@
     (if (= api "ch") (apikey-lookup-in-db api id) {:apikey api :apiid id}))
 
 (defn- sbb-id-lookup [api id]
-    (if (= api "ch") id nil))
+    (if (= api "ch") id id))
 
 (defn station* [api id]
   (let [apikey (apikey-lookup api id)]

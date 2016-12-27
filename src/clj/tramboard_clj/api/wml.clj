@@ -117,6 +117,7 @@
               )
      :platform (if (= platform "") nil platform)
      :dt (or timestamprt timestamp)
+     :source "wml"
      :departure {:scheduled timestamp
                  :realtime timestamprt
                  }}))

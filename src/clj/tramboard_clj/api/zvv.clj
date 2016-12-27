@@ -209,8 +209,8 @@
   (str station-base-url id "&maxJourneys=" (station-limit id)))
 
 (defn station [id sbbid]
-  (let [request-url (zvv-station-url id)]
-  (do-api-call request-url (transform-station-response id))))
+  (let [request-url (zvv-station-url sbbid)]
+  (do-api-call request-url (transform-station-response sbbid))))
 
 (defn station-with-time [id sbbid datetime]
   (let [request-url (zvv-station-url id)

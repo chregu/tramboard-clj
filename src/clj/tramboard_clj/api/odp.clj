@@ -7,6 +7,7 @@
             [org.httpkit.client :as http]
             [clojure.xml :as xml]
             [clojure.zip :as zip]
+            [clojure.tools.logging :as log]
             [clojure.data.zip.xml :refer [text xml-> xml1->]]
             [tramboard-clj.api.zvv :as zvv]
             [tramboard-clj.api.common :as c]))
@@ -60,6 +61,8 @@
     "InterCityNight" "ICN"
     "InterCityExpress" "ICE"
     "Regional-Express" "RE"
+    "RegioExpress" "RE"
+    "Regionalzug" "R"
     "InterRegio" "IR"
     "Voralpen-Express" "VAE"
     "EuroCity" "EC"
@@ -76,11 +79,13 @@
         line-code  (xml1-> odp-journey :m :nu text)
         line-code-type (xml1-> odp-journey :m :n text)
         line-color "#000000"
-        name  (xml1-> odp-journey  :Service :PublishedLineName :Text text)
+        publishedLineName (xml1-> odp-journey :Service :PublishedLineName :Text text)
+        modeName (xml1-> odp-journey :Service :Mode :Name :Text text)
+        name0  (if (= publishedLineName "")  modeName publishedLineName)
+        name (if (= (xml1-> odp-journey  :Service :Mode :RailSubmode text) "suburbanRailway") (str "S" name0) name0)
         ]
     {:type (map-category (xml1-> odp-journey  :Service :Mode :Name :Text text))
-     :name (if (= (xml1-> odp-journey  :Service :Mode :RailSubmode text) "suburbanRailway")
-      (str "S" name) name)
+     :name (name-category  name "")
      :accessible false
      :colors {:fg "#000000" :bg "#FFFFFF"}
      :to (xml1-> odp-journey  :Service :DestinationText :Text text)
@@ -148,7 +153,7 @@
 
 ; TODO error handling
 (defn- get-hash [dept]
-    (str "t" (digest/md5 (str (subs (dept :to) 1 3) (dept :name)((dept :departure) :scheduled)))))
+    (str "t" (digest/md5 (str (if (= (dept :to) "") "empty" (subs (dept :to) 1 (min (count (dept :to)) 10))) (dept :name)((dept :departure) :scheduled)))))
 
 (defn odp-do-api-call2 [url transform-fn url2 transform-fn2 get-hash id]
   (let [response    (http/post url (postrequestParams id))
@@ -163,7 +168,7 @@
 ; To ask on opentransportdata.swiss AND zvv (since zvv eg has platform data)
 (defn station [id sbbid]
   (let [request-url station-base-url]
-        (odp-station id sbbid request-url get-hash)))
+        (odp-station sbbid sbbid request-url get-hash)))
 
 ; to only ask on opentransportdata.swiss
 (defn station_ [id sbbid]

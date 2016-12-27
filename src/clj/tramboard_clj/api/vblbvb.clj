@@ -79,6 +79,7 @@
      :to (xml1-> vbl-journey :m :des text)
      :platform (xml1-> vbl-journey :r :pl text)
      :dt (or timestamprt timestamp)
+     :source "v"
      :departure {:scheduled timestamp
                  :realtime timestamprt}}))
 
