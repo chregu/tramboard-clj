@@ -106,14 +106,18 @@
     (if (= api "ch") id id))
 
 (defn station* [api id]
-  (let [apikey (apikey-lookup api id)]
+  (let [id2 (clojure.string/replace id #"^0*" "")
+        apikey (apikey-lookup api id2)
+
+  ]
   {:headers {"Content-Type" "application/json; charset=utf-8"}
-   :body ((resolve (symbol (str "tramboard-clj.api." (apikey :apikey) "/station"))) (apikey :apiid) (sbb-id-lookup api id))}))
+   :body ((resolve (symbol (str "tramboard-clj.api." (apikey :apikey) "/station"))) (apikey :apiid) (sbb-id-lookup api id2))}))
 
 (defn station-with-time* [api id datetime]
-  (let [apikey (apikey-lookup api id)]
+  (let [id2 (clojure.string/replace id #"^0*" "")
+        apikey (apikey-lookup api id2)]
   {:headers {"Content-Type" "application/json; charset=utf-8"}
-   :body ((resolve (symbol (str "tramboard-clj.api." (apikey :apikey) "/station-with-time"))) (apikey :apiid) (sbb-id-lookup api id) datetime)}))
+   :body ((resolve (symbol (str "tramboard-clj.api." (apikey :apikey) "/station-with-time"))) (apikey :apiid) (sbb-id-lookup api id2) datetime)}))
 
 (defn- query-stations* [api query]
   (let [apikey (if (= api "ch") fallback-api api)]
