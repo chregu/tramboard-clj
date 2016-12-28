@@ -92,6 +92,7 @@
      :platform nil ; Not yet available
      :dt (or timestamprt timestamp)
      :source "odp"
+    ; :id (xml1-> odp-journey :Service :DestinationStopPointRef text)
      :departure {:scheduled timestamp
                  :realtime timestamprt}}))
 
@@ -157,8 +158,19 @@
 
 (defn odp-do-api-call2 [url transform-fn url2 transform-fn2 get-hash id]
   (let [response    (http/post url (postrequestParams id))
-        response2   (http/get url2 {:socket-timeout 5000 :conn-timeout 3000})]
-    (c/combine-results (if (= 200 (:status @response)) (transform-fn (:body @response)) {:error (:status @response)}) (transform-fn2 (:body @response2)) get-hash)))
+        response2   (http/get url2 {:socket-timeout 5000 :conn-timeout 3000})
+        result (if (= 200 (:status @response)) (transform-fn (:body @response)) {:error (:status @response)} )
+        result2 (if (= 200 (:status @response2)) (transform-fn2 (:body @response2)) {:error (:status @response2)})
+        combined (c/combine-results  result result2 get-hash)
+        ]
+        ; make sure we don't have trailing odp entries at the end (due to meta station like Bern, Hauptbahnhof delivering
+        ;  way more data from zvv than from odp. Just return the same amount of entries as zvv returns. Should be good enough
+        (if (> (count (result2 :departures)) 10)
+            (assoc-in combined [:departures] (take (count (result2 :departures)) (combined :departures)))
+            combined
+            )
+
+    ))
 
 (defn odp-station [id sbbid request-url get-hash]
   (let [sbbid2 (if (nil? sbbid) id sbbid)
