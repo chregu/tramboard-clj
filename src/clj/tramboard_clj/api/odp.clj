@@ -162,11 +162,12 @@
         result (if (= 200 (:status @response)) (transform-fn (:body @response)) {:error (:status @response)} )
         result2 (if (= 200 (:status @response2)) (transform-fn2 (:body @response2)) {:error (:status @response2)})
         combined (c/combine-results  result result2 get-hash)
+        countDepartures (count (result2 :departures))
         ]
         ; make sure we don't have trailing odp entries at the end (due to meta station like Bern, Hauptbahnhof delivering
         ;  way more data from zvv than from odp. Just return the same amount of entries as zvv returns. Should be good enough
-        (if (> (count (result2 :departures)) 10)
-            (assoc-in combined [:departures] (take (count (result2 :departures)) (combined :departures)))
+        (if (> countDepartures 10)
+            (assoc-in combined [:departures] (take countDepartures (combined :departures)))
             combined
             )
 
