@@ -67,9 +67,12 @@
     (when (not (or (empty? date) (empty? time)))
       (format-date date time))))
 
-(defn-  zvv-to-sbb-id [id]
+(defn- zvv-to-sbb-id-uncached [id]
 (let [sbbid (first (query db (str "select sbb_id from zvv_to_sbb where zvv_id = " id )))]
     (if (nil? sbbid) nil (:sbb_id sbbid))))
+
+(def zvv-to-sbb-id
+  (memoize zvv-to-sbb-id-uncached))
 
 ; TODO add 1 day to realtime if it is smaller than scheduled (scheduled 23h59 + 3min delay ...)
 (defn- zvv-departure [zvv-journey]

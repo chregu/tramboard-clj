@@ -87,9 +87,12 @@
 
 
 
-(defn- get-api-key [id]
+(defn- get-api-key-uncached [id]
   (let [stripped_id (clojure.string/replace id #"^0*" "")]
   (first (query db (str "select zapikey as apikey, zapiid as apiid from ZTFCSTATIONMODEL where ZID = " stripped_id)))))
+
+(def get-api-key
+  (memoize get-api-key-uncached))
 
 (defn- apikey-lookup-in-db [api id]
     (let [apikeys-result (get-api-key id)
