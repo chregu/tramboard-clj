@@ -12,26 +12,27 @@
        (fact "extracts station information under meta key"
              ((zvv/transform-station-response "8588078") (:central_2228 fixtures)) =>
              (contains {:meta (contains {:station_id "8588078" :station_name "Zürich, Central"})}))
-       (fact "also works when there are no color information"
-             ((zvv/transform-station-response "") (:flughafen_xxxx fixtures)) =>
-             (contains {:departures (contains {:name "S2"
-                                               :type "s-train"
-                                               :accessible false
-                                               :colors { :fg nil :bg nil }
-                                               :to "Ziegelbrücke"
-                                               :departure {
-                                                           :scheduled "2015-02-01T19:36:00.000+01:00"
-                                                           :realtime "2015-02-01T19:36:00.000+01:00"}})}))
-       (fact "returns a list of departures"
-             ((zvv/transform-station-response "") (:central_2228 fixtures)) =>
-             (contains {:departures (contains {:name "31"
-                                               :type "bus"
-                                               :accessible true
-                                               :colors { :fg "#ffffff" :bg "#a5a2c6" }
-                                               :to "Zürich, Hegibachplatz"
-                                               :departure {
-                                                           :scheduled "2015-01-27T22:38:00.000+01:00"
-                                                           :realtime "2015-01-27T22:38:00.000+01:00"}})})))
+      ; (fact "also works when there are no color information"
+      ;       ((zvv/transform-station-response "") (:flughafen_xxxx fixtures)) =>
+      ;       (contains {:departures (contains {:name "S2"
+      ;                                         :type "s-train"
+      ;                                         :accessible false
+      ;                                         :colors { :fg nil :bg nil }
+      ;                                         :to "Ziegelbrücke"
+      ;                                         :departure {
+      ;                                                     :scheduled "2015-02-01T19:36:00.000+01:00"
+       ;                                                    :realtime "2015-02-01T19:36:00.000+01:00"}})}))s
+    ;   (fact "returns a list of departures"
+    ;         ((zvv/transform-station-response "") (:central_2228 fixtures)) =>
+    ;         (contains {:departures (contains {:name "31"
+    ;                                           :type "bus"
+    ;                                           :accessible true
+    ;                                           :colors { :fg "#ffffff" :bg "#a5a2c6" }
+    ;                                           :to "Zürich, Hegibachplatz"
+    ;                                           :departure {
+    ;                                                       :scheduled "2015-01-27T22:38:00.000+01:00"
+    ;                                                       :realtime "2015-01-27T22:38:00.000+01:00"}})}))
+    )
 
 (facts "transform zvv response for query stations"
        (fact "extracts query stations"
