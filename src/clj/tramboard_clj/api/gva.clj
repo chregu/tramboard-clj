@@ -18,7 +18,8 @@
 (defn- gva-parse-datetime [timestamp]
   (if (nil? timestamp)
     nil
-    (str (f/parse gva-date-formatter timestamp))))
+    (try (str (-> (f/parse gva-date-formatter timestamp) .secondOfMinute .withMinimumValue)) (catch Exception e nil))))
+; the above rounds to a full minute, in case there are seconds as well, which we don't care about
 
 (def black-line-codes #{"Z" "F" "G" "Y" "D" "Dn" "M" "K" "T" "O" "19" "61" "12" "28" "4" "6" "34" "45" "43" "42" "53" "57" "72"})
 
