@@ -181,11 +181,14 @@
   (fn [response-body]
   (let [data     (json/parse-string response-body)
         got-useful-response (some? data)
-        connections (if got-useful-response
-                      (->> (data "connections")
-                         (map zvv-connection)
+        connections-all (if got-useful-response
+                          (->> (data "connections")
+                             (map zvv-connection))
+                             [])
+
+        connections  (->> connections-all
                          (filter #(if (= (:scheduled (:departure (first %))) date) true false)))
-                      [])
+
         ; If we have more than one connection with the same departure time, filter
         ; according to the arrival time if we have that (example is "Zurich -> Zug" where
         ; 2 trains start at xx:04 to Zug, the S9 and an IR
@@ -195,8 +198,18 @@
         ;  Better this than nothing
         connections-final (if (= (count connections-arrival-filtered) 0)
                             connections
-                            connections-arrival-filtered)]
-    {:passlist connections-final})))
+                            connections-arrival-filtered)
+        ; If we couldn't find any matching departure, just take the one nearest to the time and in the past
+        ;  gva doesn't return scheduled times, therefore we need this here to at least show something
+        connections-final2 (if (= (count connections-final) 0)
+                            (->> connections-all
+                                ; filter out all departures later
+                                (filter #(if (> (compare (:scheduled (:departure (first %))) date) 0) false true))
+                                last
+                                )
+                            connections-final)
+                            ]
+    {:passlist connections-final2})))
 
 ; TODO error handling
 (defn- do-api-call [url transform-fn]
