@@ -6,6 +6,7 @@
             [clojure.string :as str]
             [org.httpkit.client :as http]
             [clojure.java.jdbc :refer :all]
+            [clojure.tools.logging :as log]
             [clojure.tools.html-utils :as html]))
 
 (def query-stations-base-url "http://online.fahrplan.zvv.ch/bin/ajax-getstop.exe/dny?start=1&tpl=suggest2json&REQ0JourneyStopsS0A=7&getstop=1&noSession=yes&REQ0JourneyStopsB=25&REQ0JourneyStopsS0G=")
@@ -242,6 +243,7 @@
   (let [date (f/parse input-datetime-formatter datetime)
         date-10 (t/plus date (t/minutes -10))
         request-url (str query-connections-base-url "from=" (codec/url-encode from) "&to=" (codec/url-encode to) "&date=" (codec/url-encode (f/unparse date-formatter date-10)) "&time=" (codec/url-encode (f/unparse time-formatter date-10)))]
+;{:url request-url}))
     (do-api-call request-url (transform-query-connections-response (f/unparse z-date-formatter date) nil))))
 
 (defn query-connections-with-arrival [from to datetime arrivaltime]
@@ -249,6 +251,7 @@
         arrivaldate (f/parse input-datetime-formatter arrivaltime)
         date-10 (t/plus date (t/minutes -10))
         request-url (str query-connections-base-url "from=" (codec/url-encode from) "&to=" (codec/url-encode to) "&date=" (codec/url-encode (f/unparse date-formatter date-10)) "&time=" (codec/url-encode (f/unparse time-formatter date-10)))]
+; {:url request-url }))
     (do-api-call request-url (transform-query-connections-response (f/unparse z-date-formatter date) (f/unparse z-date-formatter arrivaldate)))))
 
 

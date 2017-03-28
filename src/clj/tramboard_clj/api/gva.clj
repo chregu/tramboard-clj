@@ -84,8 +84,11 @@
                           colors      (data "colors")
                           colors-map  (into {} (map #(vector (% "lineCode") (str "#" (% "hexa"))) colors))]
                       (deliver line-colors colors-map))))))
-    (do-api-call request-url transform-station-response)))
+  {:url request-url}))
+  ;    (do-api-call request-url transform-station-response)))
 
 (defn query-stations [query]
   (let [request-url (str query-stations-base-url (codec/url-encode query))]
-    (do-api-call request-url transform-query-stations-response)))
+;{:url request-url}))
+
+  (do-api-call request-url transform-query-stations-response)))
