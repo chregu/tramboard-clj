@@ -9,7 +9,7 @@
 (def station-base-url               "http://prod.ivtr-od.tpg.ch/v1/GetNextDepartures?key=21a25080-9bbc-11e4-bc99-0002a5d5c51b&stopCode=")
 
 (def line-colors-fetched (atom false))
-(def line-colors-url "http://prod.ivtr-od.tpg.ch/GetLinesColors?key=21a25080-9bbc-11e4-bc99-0002a5d5c51b")
+(def line-colors-url "http://prod.ivtr-od.tpg.ch/v1/GetLinesColors?key=21a25080-9bbc-11e4-bc99-0002a5d5c51b")
 (def line-colors (promise))
 
 (def gva-timezone (t/time-zone-for-id "Europe/Zurich"))
@@ -51,9 +51,10 @@
   (let [data           (json/parse-string response-body)
         journeys       (data "departures")
         station        (data "stop")]
-    ; {:meta data}
+    {:meta data}
     {:meta {:station_id (station "stopCode")
             :station_name (station "stopName")}
+     ;       :departues journeys
      :departures (map gva-departure (remove #(= (% "waitingTime") "no more") journeys))}
     ))
 
@@ -84,8 +85,8 @@
                           colors      (data "colors")
                           colors-map  (into {} (map #(vector (% "lineCode") (str "#" (% "hexa"))) colors))]
                       (deliver line-colors colors-map))))))
-  {:url request-url}))
-  ;    (do-api-call request-url transform-station-response)))
+  {:url request-url}
+      (do-api-call request-url transform-station-response)))
 
 (defn query-stations [query]
   (let [request-url (str query-stations-base-url (codec/url-encode query))]
