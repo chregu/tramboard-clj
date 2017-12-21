@@ -31,7 +31,7 @@
 (defn- sanitize [text]
   (reduce #(str/replace %1 (%2 0) (%2 1))
           text
-          [["&nbsp;" " "] [#"S( )+" "S"] ["Bus " ""]]))
+          [["&nbsp;" " "] [#"S( )+" "S"] [#"IC( )+.*" "IC"] [#"IR( )+.*" "IR"] [#"Tro( )+" ""]   [#"Bus( )+" ""] [#"Trm( )+" ""] ["Bus " ""]]))
 
 (defn- map-category [text]
   (case text
@@ -80,7 +80,7 @@
   (let [product         (zvv-journey "product")
         main-location   (zvv-journey "mainLocation")
         color           (product "color")
-        line            (or (product "line") (product "name"))
+        line            (or  (product "name")(product "line") )
         platform        (main-location "platform")
         attributes-bfr  (zvv-journey "attributes_bfr")
         timestamp       (zvv-date main-location)
@@ -141,12 +141,12 @@
 (defn- zvv-passlist-remove-same [passlist]
     (let [departure (:departure passlist )
           arrival   (:arrival passlist )]
-    
+
           (if (and (= (:scheduled departure) (:scheduled arrival))
                    (= (:realtime departure)  (:realtime arrival))
-          ) 
+          )
             (dissoc passlist :arrival)
-            ; the if nil? assoc can be removed, when time for coffee 1.9.1 is release 
+            ; the if nil? assoc can be removed, when time for coffee 1.9.1 is release
             (if (nil? (:scheduled departure))
                 (assoc passlist :departure arrival)
                 passlist
@@ -234,7 +234,7 @@
         datetime2 (f/parse input-datetime-formatter datetime)
         request-url-with-time (str request-url "&date=" (codec/url-encode (f/unparse date-formatter-dot datetime2)) "&time=" (codec/url-encode (f/unparse time-formatter datetime2)))]
     (do-api-call request-url-with-time (transform-station-response id))))
-  
+
 (defn query-stations [query]
   (let [request-url (str query-stations-base-url (codec/url-encode query))]
     (do-api-call request-url transform-query-stations-response)))
