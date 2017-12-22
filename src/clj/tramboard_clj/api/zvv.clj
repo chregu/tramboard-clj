@@ -28,10 +28,15 @@
    })
 
 
-(defn- sanitize [text]
+(defn- sanitize-line [text]
   (reduce #(str/replace %1 (%2 0) (%2 1))
           text
-          [["&nbsp;" " "] [#"S( )+" "S"] [#"IC( )+.*" "IC"] [#"IR( )+.*" "IR"] [#"Tro( )+" ""]   [#"Bus( )+" ""] [#"Trm( )+" ""] ["Bus " ""]]))
+          [["&nbsp;" " "] [#"S( )+" "S"] [#"IC( )+.*" "IC"] [#"IR( )+.*" "IR"] [#"Tro( )+" ""] [#"Bus( )+" ""] [#"Trm( )+" ""] ["Bus " ""]]))
+
+(defn sanitize-to [text]
+  (reduce #(str/replace %1 (%2 0) (%2 1))
+          text
+          [[#" +\(SZU\)" ""]]))
 
 (defn- map-category [text]
   (case text
@@ -90,12 +95,12 @@
         last-location-id-nr (read-string last-location-id)
         last-location-arrival (zvv-date last-location)
         ]
-    {:name (sanitize line)
+    {:name (sanitize-line line)
      :type (map-category (product "icon"))
      :accessible (not (empty? (filter #(contains? #{"6" "9" "NF"} (% "code")) attributes-bfr)))
      :colors {:fg (str "#" (color "fg"))
               :bg (str "#" (color "bg"))}
-     :to (html/xml-decode (product "direction"))
+     :to (sanitize-to (html/xml-decode (product "direction")))
      :id (if (and (< last-location-id-nr 300000) (> last-location-id-nr 290000)) (zvv-to-sbb-id last-location-id) last-location-id ) ; zvv has sometimes it's internal ids on some stations
      :platform (if (= platform "") nil platform)
      :dt (or timestamprt timestamp)

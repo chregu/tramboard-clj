@@ -24,17 +24,14 @@
     (try (str (f/parse odp-date-formatter timestamp)) (catch Exception e nil))))
 
 (defn zip-str [s]
-  (zip/xml-zip 
+  (zip/xml-zip
     (try
       (xml/parse (java.io.ByteArrayInputStream. (.getBytes s)))
-      (catch Exception e {:error"xml parse error"}))))  
+      (catch Exception e {:error"xml parse error"}))))
 
 
 ; if the hash making fails due to too different names, fix it here
-(defn map-station-name [text]
-  (case text
-    "Basel St-Louis Grenze" "St-Louis Grenze"
-    text))
+
 
 (defn- map-category [text]
   (case text
@@ -67,7 +64,7 @@
     "Voralpen-Express" "VAE"
     "EuroCity" "EC"
     "InterCity" "IC"
-    (if (= default "") text default)))    
+    (if (= default "") text default)))
 
 (defn- odp-departure [odp-journey]
   (let [timestamp  (odp-parse-datetime (xml1-> odp-journey  :ThisCall :CallAtStop :ServiceDeparture :TimetabledTime text) )
@@ -88,7 +85,7 @@
      :name (name-category  name "")
      :accessible false
      :colors {:fg "#000000" :bg "#FFFFFF"}
-     :to (xml1-> odp-journey  :Service :DestinationText :Text text)
+     :to (zvv/sanitize-to (xml1-> odp-journey  :Service :DestinationText :Text text))
      :platform nil ; Not yet available
      :dt (or timestamprt timestamp)
      :source "odp"
