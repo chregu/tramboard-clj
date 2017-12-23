@@ -31,7 +31,7 @@
 (defn- sanitize-line [text]
   (reduce #(str/replace %1 (%2 0) (%2 1))
           text
-          [["&nbsp;" " "] [#"S( )+" "S"] [#"IC( )+.*" "IC"] [#"IR( )+.*" "IR"] [#"Tro( )+" ""] [#"Bus( )+" ""] [#"Trm( )+" ""] ["Bus " ""]]))
+          [["&nbsp;" " "] [#"S( )+" "S"] [#"SN( )+" "SN"] [#"IC( )+.*" "IC"] [#"IR( )+.*" "IR"] [#"Tro( )+" ""] [#"Bus( )+" ""] [#"Trm( )+" ""] ["Bus " ""] [" +" " "]]))
 
 (defn sanitize-to [text]
   (reduce #(str/replace %1 (%2 0) (%2 1))
